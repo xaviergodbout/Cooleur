@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Create, tune, lock, and export harmonious color palettes." />
+    <meta name="theme-color" content="#17181b" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Cooleur — Palette Studio</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Cooleur home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>cooleur</span>
+      </a>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Toggle dark theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8 8 0 0 1 8.6 4 8 8 0 1 0 20 15.4Z"/></svg>
+        </button>
+        <div class="export-wrap">
+          <button class="button dark" id="exportButton" type="button" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v4h16v-4"/></svg> Export
+          </button>
+          <div class="export-menu" id="exportMenu" role="menu" hidden>
+            <button type="button" role="menuitem" data-export="svg">Download SVG</button>
+            <button type="button" role="menuitem" data-export="png">Download PNG</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="Palette controls">
+        <div class="control-group mode-control">
+          <span id="harmonyCaption">Color harmony</span>
+          <select id="harmonySelect" hidden aria-hidden="true" tabindex="-1">
+            <option value="balanced">Balanced</option>
+            <option value="monochromatic">Monochromatic</option>
+            <option value="analogous">Analogous</option>
+            <option value="complementary">Complementary</option>
+            <option value="triadic">Triadic</option>
+            <option value="tetradic">Tetradic</option>
+            <option value="square">Square</option>
+          </select>
+          <button class="harmony-trigger" id="harmonyTrigger" type="button" aria-labelledby="harmonyCaption harmonyLabel" aria-haspopup="listbox" aria-expanded="false" aria-controls="harmonyMenu"><span id="harmonyLabel">Balanced</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="harmony-menu" id="harmonyMenu" role="listbox" aria-label="Color harmony" hidden>
+            <button type="button" role="option" aria-selected="true" data-harmony="balanced">Balanced</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="monochromatic">Monochromatic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="analogous">Analogous</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="complementary">Complementary</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="triadic">Triadic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="tetradic">Tetradic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="square">Square</button>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button class="button ghost" id="variationsButton" type="button">
+            <span class="button-icon" aria-hidden="true">◫</span> Variations
+          </button>
+          <button class="button ghost" id="adjustmentsButton" type="button">
+            <span class="button-icon" aria-hidden="true">☷</span> Fine tune
+          </button>
+        </div>
+        <button class="button generate" id="generateButton" type="button">
+          <span aria-hidden="true">✦</span> Generate palette
+        </button>
+      </section>
+
+      <div class="workspace" id="workspace">
+      <section class="palette-shell" aria-label="Current color palette">
+        <div class="palette" id="palette"></div>
+        <section class="variations-view" id="variationsView" hidden aria-label="Palette variations">
+          <div class="variations-header"><strong>Palette variations</strong><button id="closeVariations" type="button">Back to palette</button></div>
+          <div class="variation-tabs" role="tablist" aria-label="Variation type">
+            <button class="active" type="button" role="tab" aria-selected="true" data-variation="luminance">Luminance</button>
+            <button type="button" role="tab" aria-selected="false" data-variation="saturation">Saturation</button>
+            <button type="button" role="tab" aria-selected="false" data-variation="temperature">Temperature</button>
+          </div>
+          <div class="variation-grid" id="variationGrid"></div>
+        </section>
+        <div class="palette-footer">
+          <p id="paletteStatus" aria-live="polite">6 colors · 0 locked</p>
+          <button class="add-color" id="addColorButton" type="button"><span aria-hidden="true">＋</span> Add color</button>
+        </div>
+      </section>
+      <aside class="adjustments-panel" id="adjustmentsPanel" hidden aria-labelledby="adjustTitle">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Fine tune</p>
+          <h2 id="adjustTitle">Adjust the palette</h2>
+        </div>
+        <button class="icon-button close-dialog" id="closeAdjustments" type="button" aria-label="Close adjustments">×</button>
+      </div>
+      <div class="panel-body">
+        <div class="slider-grid">
+          <label class="slider-card">
+            <span><b>Hue</b><output id="hueOutput">0°</output></span>
+            <input id="hueSlider" type="range" min="-180" max="180" value="0" />
+            <small>Shift every color around the wheel</small>
+          </label>
+          <label class="slider-card">
+            <span><b>Saturation</b><output id="saturationOutput">0</output></span>
+            <input id="saturationSlider" type="range" min="-50" max="50" value="0" />
+            <small>Muted to vivid</small>
+          </label>
+          <label class="slider-card">
+            <span><b>Brightness</b><output id="brightnessOutput">0</output></span>
+            <input id="brightnessSlider" type="range" min="-40" max="40" value="0" />
+            <small>Shadow to highlight</small>
+          </label>
+          <label class="slider-card temperature-card">
+            <span><b>Temperature</b><output id="temperatureOutput">Neutral</output></span>
+            <input id="temperatureSlider" class="temperature" type="range" min="-60" max="60" value="0" />
+            <small>Cool blue to warm amber</small>
+          </label>
+        </div>
+        <button class="reset-panel" id="resetAdjustments" type="button">Reset all adjustments</button>
+      </div>
+      </aside>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
