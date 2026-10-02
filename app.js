@@ -9,11 +9,12 @@ const schemes = {
   tetradic: [0, 60, 180, 240, 12, 192],
   square: [0, 90, 180, 270, 12, 102]
 };
+const harmonyIcons={balanced:'✦',monochromatic:'◉',analogous:'◔',complementary:'◐',triadic:'△',tetradic:'◇',square:'□'};
 
 const els = {
   palette: document.querySelector('#palette'), status: document.querySelector('#paletteStatus'),
   harmony: document.querySelector('#harmonySelect'), harmonyTrigger: document.querySelector('#harmonyTrigger'), harmonyMenu: document.querySelector('#harmonyMenu'), harmonyLabel: document.querySelector('#harmonyLabel'), themeToggle: document.querySelector('#themeToggle'),
-  generate: document.querySelector('#generateButton'), add: document.querySelector('#addColorButton'),
+  generate: document.querySelector('#generateButton'),
   variations: document.querySelector('#variationsButton'), variationView: document.querySelector('#variationsView'),
   closeDialog: document.querySelector('#closeVariations'), variationGrid: document.querySelector('#variationGrid'),
   adjustmentsButton: document.querySelector('#adjustmentsButton'), adjustmentsPanel: document.querySelector('#adjustmentsPanel'),
@@ -27,7 +28,7 @@ const initial = ['#EF476F', '#F78C6B', '#FFD166', '#06D6A0', '#118AB2', '#073B4C
 let state = {
   colors: initial.map((hex, i) => ({ id: crypto.randomUUID?.() || `${Date.now()}-${i}`, hex, locked: false })),
   baseColors: [...initial], format: 'hex', harmony: 'balanced', variation: 'luminance',
-  adjustments: { hue: 0, saturation: 0, brightness: 0, temperature: 0 }
+  adjustments: { hue: 0, saturation: 0, brightness: 0, temperature: 0 }, localShades: -1
 };
 
 function clamp(n, min = 0, max = 100) { return Math.min(max, Math.max(min, n)); }
@@ -87,10 +88,12 @@ function setTheme(theme){
   els.themeToggle.setAttribute('aria-pressed',String(theme==='dark'));
   els.themeToggle.setAttribute('aria-label',`Switch to ${theme==='dark'?'light':'dark'} theme`);
   els.themeToggle.title=`Switch to ${theme==='dark'?'light':'dark'} theme`;
+  els.themeToggle.dataset.tooltip=`Switch to ${theme==='dark'?'light':'dark'} theme`;
   try{localStorage.setItem('cooleur-theme',theme);}catch{}
 }
 
 function render() {
+  document.querySelector('#contrastPopover').hidden=true;
   els.palette.innerHTML='';
   const buttonColor=state.colors.find(c=>!c.locked)?.hex||state.colors[0].hex;
   els.generate.style.background=buttonColor;
@@ -101,22 +104,23 @@ function render() {
     swatch.className=`swatch${color.locked?' locked':''}`; swatch.style.background=color.hex; swatch.style.color=ink;
     swatch.innerHTML=`
       <div class="swatch-rail" aria-label="Color actions">
-        <button class="rail-button remove-button" type="button" aria-label="Remove color ${index+1}" title="Remove color">×</button>
+        <button class="rail-button remove-button" type="button" aria-label="Remove color ${index+1}" title="Remove color"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button>
+        <button class="rail-button add-swatch-button" type="button" aria-label="Add color after color ${index+1}" title="Add color" ${state.colors.length>=MAX_COLORS?'disabled':''}><svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg></button>
         <button class="rail-button shades-button" type="button" aria-label="View shades for color ${index+1}" title="View shades"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18m-18 5h18"/></svg></button>
-        <button class="rail-button favorite-button${color.favorite?' active':''}" type="button" aria-label="${color.favorite?'Unfavorite':'Favorite'} color ${index+1}" aria-pressed="${!!color.favorite}" title="${color.favorite?'Unfavorite':'Favorite'} color"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.2 5.2 0 0 0-7.4 0L12 6l-1.4-1.4a5.2 5.2 0 0 0-7.4 7.4L12 21l8.8-9a5.2 5.2 0 0 0 0-7.4Z"/></svg></button>
         <button class="rail-button drag-handle" type="button" aria-label="Drag color ${index+1} to reorder" title="Drag to reorder"><svg viewBox="0 0 24 24"><path d="M3 12h18m-18 0 4-4m-4 4 4 4m14-4-4-4m4 4-4 4"/></svg></button>
         <button class="rail-button copy-button" type="button" aria-label="Copy ${color.hex}" title="Copy HEX"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
-        <button class="rail-button info-button" type="button" aria-label="Color ${index+1} information" title="Color information"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg></button>
+        <button class="rail-button contrast-button" type="button" aria-label="Check contrast for color ${index+1}" title="Check contrast"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg></button>
         <button class="rail-button lock-button" type="button" aria-label="${color.locked?'Unlock':'Lock'} color ${index+1}" aria-pressed="${color.locked}" title="${color.locked?'Unlock':'Lock'} color">${lockIcon(color.locked)}</button>
       </div>
-      <button class="swatch-code" type="button" aria-label="Edit color ${index+1}, ${color.hex}" title="Change color">${color.hex}</button>`;
+      <div class="swatch-meta"><button class="swatch-code" type="button" aria-label="Edit color ${index+1}, ${color.hex}" title="Change color">${color.hex}</button><span class="color-name">${colorName(color.hex)}</span></div>
+      ${state.localShades===index?'<div class="local-shades" aria-label="Shades for this color"><button class="close-local-shades" type="button" aria-label="Close shades">×</button><div class="local-shade-list"></div></div>':''}`;
     swatch.querySelector('.lock-button').addEventListener('click',()=>{ color.locked=!color.locked; render(); });
     swatch.querySelector('.remove-button').addEventListener('click',()=>removeColor(index));
     swatch.querySelector('.swatch-code').addEventListener('click',e=>openColorEditor(index,e.currentTarget));
-    swatch.querySelector('.shades-button').addEventListener('click',()=>{state.variation='luminance';els.variationView.hidden=false;els.palette.hidden=true;els.variations.setAttribute('aria-pressed','true');renderVariations();});
-    swatch.querySelector('.favorite-button').addEventListener('click',()=>{color.favorite=!color.favorite;render();showToast(color.favorite?'Marked as favorite':'Favorite removed');});
+    swatch.querySelector('.add-swatch-button').addEventListener('click',()=>addColor(index));
+    swatch.querySelector('.shades-button').addEventListener('click',()=>{state.localShades=index;render();});
     swatch.querySelector('.copy-button').addEventListener('click',async()=>{await navigator.clipboard?.writeText(color.hex);showToast(`${color.hex} copied`);});
-    swatch.querySelector('.info-button').addEventListener('click',()=>{const rgb=hexToRgb(color.hex),hsl=hexToHsl(color.hex);showToast(`${color.hex} · RGB ${rgb.r}, ${rgb.g}, ${rgb.b} · HSL ${Math.round(hsl.h)}°, ${Math.round(hsl.s)}%, ${Math.round(hsl.l)}%`);});
+    swatch.querySelector('.contrast-button').addEventListener('click',e=>openContrast(index,e.currentTarget));
     swatch.querySelector('.drag-handle').addEventListener('pointerdown',()=>{swatch.draggable=true;});
     swatch.addEventListener('dragstart',e=>{if(!swatch.draggable){e.preventDefault();return;}draggedIndex=index;swatch.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(index));});
     swatch.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';swatch.classList.add('drop-target');});
@@ -126,11 +130,11 @@ function render() {
     let touchStart=null;
     swatch.addEventListener('touchstart',e=>{if(e.target.closest('button, input'))return;const t=e.changedTouches[0];touchStart={x:t.clientX,y:t.clientY};},{passive:true});
     swatch.addEventListener('touchend',e=>{if(!touchStart)return;const t=e.changedTouches[0];const moved=Math.hypot(t.clientX-touchStart.x,t.clientY-touchStart.y);touchStart=null;if(moved<24)return;const target=document.elementFromPoint(t.clientX,t.clientY)?.closest('.swatch');if(target)moveColor(index,Number(target.dataset.index));},{passive:true});
+    if(state.localShades===index){const list=swatch.querySelector('.local-shade-list');for(let row=0;row<11;row++){const hex=variationHex(color.hex,row,'luminance'),button=document.createElement('button');button.type='button';button.className='local-shade-chip';button.style.background=hex;button.style.color=contrast(hex);button.textContent=hex;button.setAttribute('aria-label',`Use shade ${hex} for color ${index+1}`);button.addEventListener('click',()=>{state.localShades=-1;setColor(index,hex);});list.appendChild(button);}swatch.querySelector('.close-local-shades').addEventListener('click',()=>{state.localShades=-1;render();});}
     els.palette.appendChild(swatch);
   });
   const locked=state.colors.filter(c=>c.locked).length;
   els.status.textContent=`${state.colors.length} colors · ${locked} locked`;
-  els.add.disabled=state.colors.length>=MAX_COLORS;
   if(!els.variationView.hidden) renderVariations();
 }
 
@@ -143,6 +147,8 @@ function positionEditor(anchor){const r=anchor.getBoundingClientRect(),w=326,h=3
 function refreshEditor(syncText=true){if(editingIndex<0)return;const hex=state.colors[editingIndex].hex,hsv=hexToHsv(hex);els.colorPlane.style.setProperty('--hue',hsv.h);document.querySelector('#planeThumb').style.left=`${hsv.s*100}%`;document.querySelector('#planeThumb').style.top=`${(1-hsv.v)*100}%`;els.editorHue.value=Math.round(hsv.h);document.querySelector('#editorPreview').style.background=hex;document.querySelector('#editorPrefix').hidden=els.editorFormat.value!=='hex';if(syncText)els.editorValue.value=editorText(hex);}
 function openColorEditor(index,anchor){editingIndex=index;els.editor.hidden=false;els.editorFormat.value=state.format;refreshEditor();positionEditor(anchor);els.editorValue.focus();els.editorValue.select();}
 function closeColorEditor(){if(editingIndex<0)return;editingIndex=-1;els.editor.hidden=true;els.editorValue.blur();}
+function relativeLuminance(hex){const {r,g,b}=hexToRgb(hex);const values=[r,g,b].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return values[0]*.2126+values[1]*.7152+values[2]*.0722;}
+function openContrast(index,anchor){const pop=document.querySelector('#contrastPopover');if(!pop.hidden&&pop.dataset.index===String(index)){pop.hidden=true;return;}const l=relativeLuminance(state.colors[index].hex),white=1.05/(l+.05),black=(l+.05)/.05;document.querySelector('#whiteContrast').textContent=white>=4.5?'✓':'×';document.querySelector('#blackContrast').textContent=black>=4.5?'✓':'×';document.querySelector('#whiteContrast').className=white>=4.5?'passes':'fails';document.querySelector('#blackContrast').className=black>=4.5?'passes':'fails';pop.dataset.index=String(index);pop.hidden=false;const r=anchor.getBoundingClientRect();pop.style.left=`${clamp(r.right+8,8,innerWidth-204)}px`;pop.style.top=`${clamp(r.top-16,8,innerHeight-90)}px`;}
 function updateEditedColor(hex){if(editingIndex<0)return;const c=state.colors[editingIndex];c.hex=hex.toUpperCase();state.baseColors=state.colors.map(x=>x.hex);const swatch=els.palette.children[editingIndex];swatch.style.background=c.hex;swatch.style.color=contrast(c.hex);swatch.querySelector('.swatch-code').textContent=c.hex;swatch.querySelector('.swatch-code').setAttribute('aria-label',`Edit color ${editingIndex+1}, ${c.hex}`);const buttonColor=state.colors.find(x=>!x.locked)?.hex||state.colors[0].hex;els.generate.style.background=buttonColor;els.generate.style.color=contrast(buttonColor);refreshEditor();}
 function commitEditor(){if(editingIndex<0)return;const raw=els.editorValue.value;const next=parseColor(els.editorFormat.value==='hex'?`#${raw.replace(/^#/, '')}`:raw);if(!next){showToast('Enter a valid color value');els.editorValue.focus();return;}updateEditedColor(next);closeColorEditor();render();}
 els.editorValue.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitEditor();}if(e.key==='Escape'){e.preventDefault();closeColorEditor();}});
@@ -155,6 +161,7 @@ els.colorPlane.addEventListener('pointerdown',e=>{els.colorPlane.setPointerCaptu
 els.colorPlane.addEventListener('pointermove',e=>{if(e.buttons)setPlaneColor(e);});
 els.colorPlane.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||editingIndex<0)return;e.preventDefault();const hsv=hexToHsv(state.colors[editingIndex].hex);hsv.s=clamp(hsv.s+(e.key==='ArrowRight'?.02:e.key==='ArrowLeft'?-.02:0),0,1);hsv.v=clamp(hsv.v+(e.key==='ArrowUp'?.02:e.key==='ArrowDown'?-.02:0),0,1);updateEditedColor(hsvToHex(hsv.h,hsv.s,hsv.v));});
 document.addEventListener('pointerdown',e=>{if(!els.editor.hidden&&!e.target.closest('#colorEditor,.swatch-code'))closeColorEditor();});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#contrastPopover,.contrast-button'))document.querySelector('#contrastPopover').hidden=true;});
 function moveColor(from,to){
   if(from<0||from===to)return;
   const [color]=state.colors.splice(from,1);state.colors.splice(to,0,color);
@@ -164,10 +171,10 @@ function moveColor(from,to){
 
 function setColor(index, hex) { state.colors[index].hex=hex.toUpperCase(); state.baseColors=state.colors.map(c=>c.hex); resetAdjustmentValues(false); render(); }
 function removeColor(index) { if(state.colors.length<=MIN_COLORS){showToast('A palette needs at least two colors');return;} state.colors.splice(index,1); state.baseColors=state.colors.map(c=>c.hex); render(); }
-function addColor() {
+function addColor(afterIndex=state.colors.length-1) {
   if(state.colors.length>=MAX_COLORS)return;
-  const last=hexToHsl(state.colors.at(-1).hex); const hex=hslToHex(last.h+35,last.s,clamp(last.l+((state.colors.length%2)?8:-8),22,80));
-  state.colors.push({id:crypto.randomUUID?.()||String(Date.now()),hex,locked:false}); state.baseColors=state.colors.map(c=>c.hex); render();
+  const last=hexToHsl(state.colors[afterIndex].hex); const hex=hslToHex(last.h+35,last.s,clamp(last.l+((state.colors.length%2)?8:-8),22,80));
+  state.colors.splice(afterIndex+1,0,{id:crypto.randomUUID?.()||String(Date.now()),hex,locked:false}); state.baseColors=state.colors.map(c=>c.hex); state.localShades=-1; render();
 }
 
 function shuffle(values) {
@@ -258,12 +265,14 @@ function exportPng(){
   canvas.toBlob(blob=>{download(blob,'cooleur-palette.png');showToast('PNG exported');},'image/png');
 }
 
-els.generate.addEventListener('click',generatePalette); els.add.addEventListener('click',addColor);
+els.generate.addEventListener('click',generatePalette);
 function closeHarmonyMenu(){els.harmonyMenu.hidden=true;els.harmonyTrigger.setAttribute('aria-expanded','false');}
 function setHarmony(mode){
   if(!schemes[mode])return;
   state.harmony=mode;els.harmony.value=mode;
   els.harmonyLabel.textContent=els.harmony.selectedOptions[0].textContent;
+  els.harmonyTrigger.dataset.tooltip=`Color harmony: ${els.harmonyLabel.textContent}`;
+  document.querySelector('#harmonyIcon').textContent=harmonyIcons[mode];
   els.harmonyMenu.querySelectorAll('[data-harmony]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.harmony===mode)));
   closeHarmonyMenu();els.harmonyTrigger.blur();generatePalette();
 }
@@ -301,7 +310,7 @@ document.addEventListener('keydown',e=>{
 function registerWebMcp(){
   const context=document.modelContext;if(!context?.registerTool)return;
   const register=(tool)=>{try{Promise.resolve(context.registerTool(tool)).catch(()=>{});}catch{}}
-  register({name:'generate_color_palette',title:'Generate color palette',description:'Generate a new visible palette using a named harmony while preserving locked colors.',inputSchema:{type:'object',properties:{harmony:{type:'string',enum:Object.keys(schemes)}},additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(input?.harmony){state.harmony=input.harmony;els.harmony.value=input.harmony;els.harmonyLabel.textContent=els.harmony.selectedOptions[0].textContent;els.harmonyMenu.querySelectorAll('[data-harmony]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.harmony===input.harmony)));}generatePalette();return{colors:state.colors.map(c=>c.hex),harmony:state.harmony};}});
+  register({name:'generate_color_palette',title:'Generate color palette',description:'Generate a new visible palette using a named harmony while preserving locked colors.',inputSchema:{type:'object',properties:{harmony:{type:'string',enum:Object.keys(schemes)}},additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(input?.harmony){state.harmony=input.harmony;els.harmony.value=input.harmony;els.harmonyLabel.textContent=els.harmony.selectedOptions[0].textContent;els.harmonyTrigger.dataset.tooltip=`Color harmony: ${els.harmonyLabel.textContent}`;document.querySelector('#harmonyIcon').textContent=harmonyIcons[input.harmony];els.harmonyMenu.querySelectorAll('[data-harmony]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.harmony===input.harmony)));}generatePalette();return{colors:state.colors.map(c=>c.hex),harmony:state.harmony};}});
   register({name:'set_locked_colors',title:'Set locked colors',description:'Set and lock one or more HEX colors in the visible palette.',inputSchema:{type:'object',properties:{colors:{type:'array',items:{type:'string',pattern:'^#[0-9A-Fa-f]{6}$'},minItems:1,maxItems:10}},required:['colors'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!Array.isArray(input.colors)||!input.colors.length)throw new Error('At least one HEX color is required');input.colors.forEach((hex,i)=>{if(i<state.colors.length){state.colors[i].hex=hex.toUpperCase();state.colors[i].locked=true;}else if(state.colors.length<MAX_COLORS)state.colors.push({id:String(Date.now()+i),hex:hex.toUpperCase(),locked:true});});state.baseColors=state.colors.map(c=>c.hex);render();return{colors:state.colors.map(c=>({hex:c.hex,locked:c.locked}))};}});
 }
 

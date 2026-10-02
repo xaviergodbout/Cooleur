@@ -20,20 +20,6 @@
           <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8 8 0 0 1 8.6 4 8 8 0 1 0 20 15.4Z"/></svg>
         </button>
-        <div class="export-wrap">
-          <button class="button dark" id="exportButton" type="button" aria-haspopup="menu" aria-expanded="false">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v4h16v-4"/></svg> Export
-          </button>
-          <div class="export-menu" id="exportMenu" role="menu" hidden>
-            <button type="button" role="menuitem" data-export="svg">Download SVG</button>
-            <button type="button" role="menuitem" data-export="png">Download PNG</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <section class="toolbar" aria-label="Palette controls">
         <div class="control-group mode-control">
           <span id="harmonyCaption">Color harmony</span>
           <select id="harmonySelect" hidden aria-hidden="true" tabindex="-1">
@@ -45,30 +31,41 @@
             <option value="tetradic">Tetradic</option>
             <option value="square">Square</option>
           </select>
-          <button class="harmony-trigger" id="harmonyTrigger" type="button" aria-labelledby="harmonyCaption harmonyLabel" aria-haspopup="listbox" aria-expanded="false" aria-controls="harmonyMenu"><span id="harmonyLabel">Balanced</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="harmony-trigger" id="harmonyTrigger" type="button" aria-labelledby="harmonyCaption harmonyLabel" aria-haspopup="listbox" aria-expanded="false" aria-controls="harmonyMenu" data-tooltip="Color harmony: Balanced"><span class="harmony-icon" id="harmonyIcon" aria-hidden="true">✦</span><span id="harmonyLabel">Balanced</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           <div class="harmony-menu" id="harmonyMenu" role="listbox" aria-label="Color harmony" hidden>
-            <button type="button" role="option" aria-selected="true" data-harmony="balanced">Balanced</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="monochromatic">Monochromatic</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="analogous">Analogous</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="complementary">Complementary</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="triadic">Triadic</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="tetradic">Tetradic</button>
-            <button type="button" role="option" aria-selected="false" data-harmony="square">Square</button>
+            <button type="button" role="option" aria-selected="true" data-harmony="balanced"><span class="harmony-icon">✦</span> Balanced</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="monochromatic"><span class="harmony-icon">◉</span> Monochromatic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="analogous"><span class="harmony-icon">◔</span> Analogous</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="complementary"><span class="harmony-icon">◐</span> Complementary</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="triadic"><span class="harmony-icon">△</span> Triadic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="tetradic"><span class="harmony-icon">◇</span> Tetradic</button>
+            <button type="button" role="option" aria-selected="false" data-harmony="square"><span class="harmony-icon">□</span> Square</button>
           </div>
         </div>
         <div class="toolbar-actions">
-          <button class="button ghost" id="variationsButton" type="button">
-            <span class="button-icon" aria-hidden="true">◫</span> Variations
+          <button class="button ghost" id="variationsButton" type="button" data-tooltip="Variations" aria-label="Variations">
+            <span class="button-icon" aria-hidden="true">◫</span><span class="button-label">Variations</span>
           </button>
-          <button class="button ghost" id="adjustmentsButton" type="button">
-            <span class="button-icon" aria-hidden="true">☷</span> Fine tune
+          <button class="button ghost" id="adjustmentsButton" type="button" data-tooltip="Fine tune" aria-label="Fine tune">
+            <span class="button-icon" aria-hidden="true">☷</span><span class="button-label">Fine tune</span>
           </button>
-          <button class="add-color" id="addColorButton" type="button"><span aria-hidden="true">＋</span> Add color</button>
         </div>
-        <button class="button generate" id="generateButton" type="button">
-          <span aria-hidden="true">✦</span> Generate palette
+        <div class="export-wrap">
+          <button class="button dark" id="exportButton" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Export palette" data-tooltip="Export palette">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v4h16v-4"/></svg><span class="button-label">Export</span>
+          </button>
+          <div class="export-menu" id="exportMenu" role="menu" hidden>
+            <button type="button" role="menuitem" data-export="svg">Download SVG</button>
+            <button type="button" role="menuitem" data-export="png">Download PNG</button>
+          </div>
+        </div>
+        <button class="button generate" id="generateButton" type="button" aria-label="Generate palette" data-tooltip="Generate palette">
+          <span aria-hidden="true">✦</span><span class="button-label">Generate palette</span>
         </button>
-      </section>
+      </div>
+    </header>
+
+    <main>
 
       <div class="workspace" id="workspace">
       <section class="palette-shell" aria-label="Current color palette">
@@ -83,6 +80,7 @@
           <div class="variation-grid" id="variationGrid"></div>
         </section>
         <div class="palette-footer">
+          <p class="palette-shortcut">Press the spacebar to generate color palettes!</p>
           <p id="paletteStatus" aria-live="polite">6 colors · 0 locked</p>
         </div>
       </section>
@@ -129,6 +127,11 @@
       <input class="editor-hue" id="editorHue" type="range" min="0" max="359" value="0" aria-label="Hue" />
       <label class="editor-value"><span id="editorPrefix">#</span><input id="editorValue" type="text" spellcheck="false" aria-label="Color value" /><span id="editorPreview" aria-hidden="true"></span></label>
       <div class="editor-footer"><label>Format <select id="editorFormat" aria-label="Color format"><option value="hex">HEX</option><option value="rgb">RGB</option><option value="hsl">HSL</option></select></label><button id="editorCopy" type="button" aria-label="Copy color value" title="Copy color value"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button></div>
+    </section>
+
+    <section class="contrast-popover" id="contrastPopover" aria-label="Text contrast" hidden>
+      <div><span>White text</span><strong id="whiteContrast"></strong></div>
+      <div><span>Black text</span><strong id="blackContrast"></strong></div>
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
