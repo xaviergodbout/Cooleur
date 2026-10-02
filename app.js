@@ -19,7 +19,8 @@ const els = {
   adjustmentsButton: document.querySelector('#adjustmentsButton'), adjustmentsPanel: document.querySelector('#adjustmentsPanel'),
   closeAdjustments: document.querySelector('#closeAdjustments'),
   exportButton: document.querySelector('#exportButton'), exportMenu: document.querySelector('#exportMenu'),
-  toast: document.querySelector('#toast'), reset: document.querySelector('#resetAdjustments')
+  toast: document.querySelector('#toast'), reset: document.querySelector('#resetAdjustments'),
+  editor: document.querySelector('#colorEditor'), editorValue: document.querySelector('#editorValue'), editorFormat: document.querySelector('#editorFormat'), editorHue: document.querySelector('#editorHue'), colorPlane: document.querySelector('#colorPlane')
 };
 
 const initial = ['#EF476F', '#F78C6B', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'];
@@ -80,8 +81,7 @@ function lockIcon(locked) {
     : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a5 5 0 0 1 9.6-2M6 10h12v10H6z"/></svg>';
 }
 const pencilIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10.7-10.7-3.5-3.5L5 15.5 4 20Z"/><path d="m13.8 6.7 3.5 3.5"/></svg>';
-const formatIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7a8 8 0 0 0-13.5-2L4 7m0 0V3m0 4h4M4 17a8 8 0 0 0 13.5 2L20 17m0 0v4m0-4h-4"/></svg>';
-function cycleFormat(){const formats=['hex','rgb','hsl'];state.format=formats[(formats.indexOf(state.format)+1)%formats.length];render();showToast(`${state.format.toUpperCase()} values`);}
+function setFormat(format){state.format=format;render();}
 function setTheme(theme){
   document.documentElement.dataset.theme=theme;
   els.themeToggle.setAttribute('aria-pressed',String(theme==='dark'));
@@ -92,41 +92,40 @@ function setTheme(theme){
 
 function render() {
   els.palette.innerHTML='';
+  const buttonColor=state.colors.find(c=>!c.locked)?.hex||state.colors[0].hex;
+  els.generate.style.background=buttonColor;
+  els.generate.style.color=contrast(buttonColor);
   state.colors.forEach((color,index)=>{
     const ink=contrast(color.hex); const swatch=document.createElement('article');
-    swatch.draggable=true; swatch.dataset.index=index; swatch.title='Click to choose a color, or drag to reorder';
+    swatch.draggable=false; swatch.dataset.index=index;
     swatch.className=`swatch${color.locked?' locked':''}`; swatch.style.background=color.hex; swatch.style.color=ink;
     swatch.innerHTML=`
-      <div class="swatch-top"><button class="icon-button remove-button" type="button" aria-label="Remove color ${index+1}">×</button></div>
-      <div class="swatch-actions">
-        <input class="native-picker" type="color" value="${color.hex}">
-        <input class="color-input" aria-label="Color ${index+1} value in ${state.format}" value="${displayValue(color.hex)}" spellcheck="false">
-        <button class="format-cycle" type="button" aria-label="Show next color value format; currently ${state.format.toUpperCase()}" title="Switch HEX / RGB / HSL">${formatIcon}</button>
+      <div class="swatch-rail" aria-label="Color actions">
+        <button class="rail-button remove-button" type="button" aria-label="Remove color ${index+1}" title="Remove color">×</button>
+        <button class="rail-button shades-button" type="button" aria-label="View shades for color ${index+1}" title="View shades"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18m-18 5h18"/></svg></button>
+        <button class="rail-button favorite-button${color.favorite?' active':''}" type="button" aria-label="${color.favorite?'Unfavorite':'Favorite'} color ${index+1}" aria-pressed="${!!color.favorite}" title="${color.favorite?'Unfavorite':'Favorite'} color"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.2 5.2 0 0 0-7.4 0L12 6l-1.4-1.4a5.2 5.2 0 0 0-7.4 7.4L12 21l8.8-9a5.2 5.2 0 0 0 0-7.4Z"/></svg></button>
+        <button class="rail-button drag-handle" type="button" aria-label="Drag color ${index+1} to reorder" title="Drag to reorder"><svg viewBox="0 0 24 24"><path d="M3 12h18m-18 0 4-4m-4 4 4 4m14-4-4-4m4 4-4 4"/></svg></button>
+        <button class="rail-button copy-button" type="button" aria-label="Copy ${color.hex}" title="Copy HEX"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+        <button class="rail-button info-button" type="button" aria-label="Color ${index+1} information" title="Color information"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg></button>
+        <button class="rail-button lock-button" type="button" aria-label="${color.locked?'Unlock':'Lock'} color ${index+1}" aria-pressed="${color.locked}" title="${color.locked?'Unlock':'Lock'} color">${lockIcon(color.locked)}</button>
       </div>
-      <div class="swatch-tools">
-        <button class="lock-button inline-lock" type="button" aria-label="${color.locked?'Unlock':'Lock'} color ${index+1}" aria-pressed="${color.locked}">${lockIcon(color.locked)}</button>
-        <button class="edit-button inline-lock" type="button" aria-label="Edit color ${index+1}" title="Open color picker">${pencilIcon}</button>
-      </div>
-      <span class="color-name">${colorName(color.hex)}</span>`;
+      <button class="swatch-code" type="button" aria-label="Edit color ${index+1}, ${color.hex}" title="Change color">${color.hex}</button>`;
     swatch.querySelector('.lock-button').addEventListener('click',()=>{ color.locked=!color.locked; render(); });
     swatch.querySelector('.remove-button').addEventListener('click',()=>removeColor(index));
-    const native=swatch.querySelector('.native-picker');
-    swatch.querySelector('.edit-button').addEventListener('click',()=>native.click());
-    swatch.querySelector('.format-cycle').addEventListener('click',cycleFormat);
-    swatch.addEventListener('click',e=>{if(!e.target.closest('button, input'))native.click();});
-    swatch.addEventListener('dragstart',e=>{draggedIndex=index;swatch.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(index));});
+    swatch.querySelector('.swatch-code').addEventListener('click',e=>openColorEditor(index,e.currentTarget));
+    swatch.querySelector('.shades-button').addEventListener('click',()=>{state.variation='luminance';els.variationView.hidden=false;els.palette.hidden=true;els.variations.setAttribute('aria-pressed','true');renderVariations();});
+    swatch.querySelector('.favorite-button').addEventListener('click',()=>{color.favorite=!color.favorite;render();showToast(color.favorite?'Marked as favorite':'Favorite removed');});
+    swatch.querySelector('.copy-button').addEventListener('click',async()=>{await navigator.clipboard?.writeText(color.hex);showToast(`${color.hex} copied`);});
+    swatch.querySelector('.info-button').addEventListener('click',()=>{const rgb=hexToRgb(color.hex),hsl=hexToHsl(color.hex);showToast(`${color.hex} · RGB ${rgb.r}, ${rgb.g}, ${rgb.b} · HSL ${Math.round(hsl.h)}°, ${Math.round(hsl.s)}%, ${Math.round(hsl.l)}%`);});
+    swatch.querySelector('.drag-handle').addEventListener('pointerdown',()=>{swatch.draggable=true;});
+    swatch.addEventListener('dragstart',e=>{if(!swatch.draggable){e.preventDefault();return;}draggedIndex=index;swatch.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(index));});
     swatch.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';swatch.classList.add('drop-target');});
     swatch.addEventListener('dragleave',()=>swatch.classList.remove('drop-target'));
     swatch.addEventListener('drop',e=>{e.preventDefault();swatch.classList.remove('drop-target');moveColor(draggedIndex,index);});
-    swatch.addEventListener('dragend',()=>{draggedIndex=-1;swatch.classList.remove('dragging');document.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'));});
+    swatch.addEventListener('dragend',()=>{draggedIndex=-1;swatch.draggable=false;swatch.classList.remove('dragging');document.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'));});
     let touchStart=null;
     swatch.addEventListener('touchstart',e=>{if(e.target.closest('button, input'))return;const t=e.changedTouches[0];touchStart={x:t.clientX,y:t.clientY};},{passive:true});
     swatch.addEventListener('touchend',e=>{if(!touchStart)return;const t=e.changedTouches[0];const moved=Math.hypot(t.clientX-touchStart.x,t.clientY-touchStart.y);touchStart=null;if(moved<24)return;const target=document.elementFromPoint(t.clientX,t.clientY)?.closest('.swatch');if(target)moveColor(index,Number(target.dataset.index));},{passive:true});
-    native.addEventListener('input',e=>setColor(index,e.target.value));
-    const input=swatch.querySelector('.color-input');
-    input.addEventListener('focus',e=>e.target.select());
-    input.addEventListener('click', async e=>{ if(document.activeElement===e.target && e.detail===2){ await navigator.clipboard?.writeText(color.hex); showToast(`${color.hex} copied`); } });
-    input.addEventListener('change',e=>{ const next=parseColor(e.target.value); if(next)setColor(index,next); else { e.target.value=displayValue(color.hex); showToast('Enter a valid color value'); } });
     els.palette.appendChild(swatch);
   });
   const locked=state.colors.filter(c=>c.locked).length;
@@ -136,6 +135,26 @@ function render() {
 }
 
 let draggedIndex=-1;
+let editingIndex=-1;
+function hexToHsv(hex){const {r,g,b}=hexToRgb(hex),max=Math.max(r,g,b)/255,min=Math.min(r,g,b)/255,d=max-min;let h=0;if(d){if(max===r/255)h=((g-b)/255/d)%6;else if(max===g/255)h=(b-r)/255/d+2;else h=(r-g)/255/d+4;}return {h:wrap(h*60),s:max?d/max:0,v:max};}
+function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;const parts=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return rgbToHex(...parts.map(n=>(n+m)*255));}
+function editorText(hex){const rgb=hexToRgb(hex),hsl=hexToHsl(hex);return els.editorFormat.value==='rgb'?`${rgb.r}, ${rgb.g}, ${rgb.b}`:els.editorFormat.value==='hsl'?`${Math.round(hsl.h)}°, ${Math.round(hsl.s)}%, ${Math.round(hsl.l)}%`:hex.slice(1);}
+function positionEditor(anchor){const r=anchor.getBoundingClientRect(),w=326,h=390;els.editor.style.left=`${clamp(r.left,8,innerWidth-w-8)}px`;els.editor.style.top=`${r.top>h+12?r.top-h-8:Math.min(r.bottom+8,innerHeight-h-8)}px`;}
+function refreshEditor(syncText=true){if(editingIndex<0)return;const hex=state.colors[editingIndex].hex,hsv=hexToHsv(hex);els.colorPlane.style.setProperty('--hue',hsv.h);document.querySelector('#planeThumb').style.left=`${hsv.s*100}%`;document.querySelector('#planeThumb').style.top=`${(1-hsv.v)*100}%`;els.editorHue.value=Math.round(hsv.h);document.querySelector('#editorPreview').style.background=hex;document.querySelector('#editorPrefix').hidden=els.editorFormat.value!=='hex';if(syncText)els.editorValue.value=editorText(hex);}
+function openColorEditor(index,anchor){editingIndex=index;els.editor.hidden=false;els.editorFormat.value=state.format;refreshEditor();positionEditor(anchor);els.editorValue.focus();els.editorValue.select();}
+function closeColorEditor(){if(editingIndex<0)return;editingIndex=-1;els.editor.hidden=true;els.editorValue.blur();}
+function updateEditedColor(hex){if(editingIndex<0)return;const c=state.colors[editingIndex];c.hex=hex.toUpperCase();state.baseColors=state.colors.map(x=>x.hex);const swatch=els.palette.children[editingIndex];swatch.style.background=c.hex;swatch.style.color=contrast(c.hex);swatch.querySelector('.swatch-code').textContent=c.hex;swatch.querySelector('.swatch-code').setAttribute('aria-label',`Edit color ${editingIndex+1}, ${c.hex}`);const buttonColor=state.colors.find(x=>!x.locked)?.hex||state.colors[0].hex;els.generate.style.background=buttonColor;els.generate.style.color=contrast(buttonColor);refreshEditor();}
+function commitEditor(){if(editingIndex<0)return;const raw=els.editorValue.value;const next=parseColor(els.editorFormat.value==='hex'?`#${raw.replace(/^#/, '')}`:raw);if(!next){showToast('Enter a valid color value');els.editorValue.focus();return;}updateEditedColor(next);closeColorEditor();render();}
+els.editorValue.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitEditor();}if(e.key==='Escape'){e.preventDefault();closeColorEditor();}});
+els.editorFormat.addEventListener('change',e=>{state.format=e.target.value;refreshEditor();els.editorValue.focus();els.editorValue.select();});
+document.querySelector('#closeColorEditor').addEventListener('click',closeColorEditor);
+document.querySelector('#editorCopy').addEventListener('click',async()=>{if(editingIndex<0)return;await navigator.clipboard?.writeText(state.colors[editingIndex].hex);showToast('Color copied');});
+els.editorHue.addEventListener('input',e=>{if(editingIndex<0)return;const hsv=hexToHsv(state.colors[editingIndex].hex);updateEditedColor(hsvToHex(Number(e.target.value),hsv.s,hsv.v));});
+function setPlaneColor(e){if(editingIndex<0)return;const r=els.colorPlane.getBoundingClientRect(),s=clamp((e.clientX-r.left)/r.width,0,1),v=1-clamp((e.clientY-r.top)/r.height,0,1);updateEditedColor(hsvToHex(Number(els.editorHue.value),s,v));}
+els.colorPlane.addEventListener('pointerdown',e=>{els.colorPlane.setPointerCapture(e.pointerId);setPlaneColor(e);});
+els.colorPlane.addEventListener('pointermove',e=>{if(e.buttons)setPlaneColor(e);});
+els.colorPlane.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||editingIndex<0)return;e.preventDefault();const hsv=hexToHsv(state.colors[editingIndex].hex);hsv.s=clamp(hsv.s+(e.key==='ArrowRight'?.02:e.key==='ArrowLeft'?-.02:0),0,1);hsv.v=clamp(hsv.v+(e.key==='ArrowUp'?.02:e.key==='ArrowDown'?-.02:0),0,1);updateEditedColor(hsvToHex(hsv.h,hsv.s,hsv.v));});
+document.addEventListener('pointerdown',e=>{if(!els.editor.hidden&&!e.target.closest('#colorEditor,.swatch-code'))closeColorEditor();});
 function moveColor(from,to){
   if(from<0||from===to)return;
   const [color]=state.colors.splice(from,1);state.colors.splice(to,0,color);

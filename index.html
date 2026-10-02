@@ -63,6 +63,7 @@
           <button class="button ghost" id="adjustmentsButton" type="button">
             <span class="button-icon" aria-hidden="true">☷</span> Fine tune
           </button>
+          <button class="add-color" id="addColorButton" type="button"><span aria-hidden="true">＋</span> Add color</button>
         </div>
         <button class="button generate" id="generateButton" type="button">
           <span aria-hidden="true">✦</span> Generate palette
@@ -83,7 +84,6 @@
         </section>
         <div class="palette-footer">
           <p id="paletteStatus" aria-live="polite">6 colors · 0 locked</p>
-          <button class="add-color" id="addColorButton" type="button"><span aria-hidden="true">＋</span> Add color</button>
         </div>
       </section>
       <aside class="adjustments-panel" id="adjustmentsPanel" hidden aria-labelledby="adjustTitle">
@@ -122,6 +122,14 @@
       </aside>
       </div>
     </main>
+
+    <section class="color-editor" id="colorEditor" aria-label="Edit color" hidden>
+      <div class="editor-head"><strong>Edit color</strong><button id="closeColorEditor" type="button" aria-label="Close color editor">×</button></div>
+      <div class="color-plane" id="colorPlane" role="slider" tabindex="0" aria-label="Saturation and brightness"><span class="plane-thumb" id="planeThumb"></span></div>
+      <input class="editor-hue" id="editorHue" type="range" min="0" max="359" value="0" aria-label="Hue" />
+      <label class="editor-value"><span id="editorPrefix">#</span><input id="editorValue" type="text" spellcheck="false" aria-label="Color value" /><span id="editorPreview" aria-hidden="true"></span></label>
+      <div class="editor-footer"><label>Format <select id="editorFormat" aria-label="Color format"><option value="hex">HEX</option><option value="rgb">RGB</option><option value="hsl">HSL</option></select></label><button id="editorCopy" type="button" aria-label="Copy color value" title="Copy color value"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button></div>
+    </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="app.js"></script>
